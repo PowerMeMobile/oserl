@@ -1005,6 +1005,9 @@
         ?UNION([?RANGE_INTEGER(1,  4,  15),
                 ?RANGE_INTEGER(1, 20,  31)])).
 
+-define(TAG_DOMAIN, ?INTEGER(4)).
+-define(TAG_RESERVED, ?EMPTY).
+
 %%%- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 %%% Standard and TLV Composite Parameters Value Definitions
 %%%

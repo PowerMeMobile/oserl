@@ -1592,5 +1592,19 @@
                     undefined,
                     undefined)).
 
--endif.  % -ifndef(smpp_param)
+%% tag
+%%
+%% %@doc This parameter is used to identify the customer id (requested by ooredoo)
+%% Integer, 4 bytes
+%%
+%% <p>ooredoo customer id</p>
+%% %@end
+-define(TAG,
+        ?SIMPLE_TLV(tag,
+                    16#201C,
+                    ?TAG_DOMAIN,
+                    ?TAG_RESERVED,
+                    undefined,
+                    undefined)).
 
+-endif.  % -ifndef(smpp_param)
