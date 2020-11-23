@@ -1592,18 +1592,18 @@
                     undefined,
                     undefined)).
 
-%% tag
+%% cid
 %%
 %% %@doc This parameter is used to identify the customer id (requested by ooredoo)
 %% Integer, 4 bytes
 %%
 %% <p>ooredoo customer id</p>
 %% %@end
--define(TAG,
-        ?SIMPLE_TLV(tag,
+-define(CID,
+        ?SIMPLE_TLV(cid,
                     16#201C,
-                    ?TAG_DOMAIN,
-                    ?TAG_RESERVED,
+                    ?CID_DOMAIN,
+                    ?CID_RESERVED,
                     undefined,
                     undefined)).
 

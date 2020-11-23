@@ -190,7 +190,7 @@
               ?USER_MESSAGE_REFERENCE,
               ?USER_RESPONSE_CODE,        % (CDMA, TDMA)
               ?USSD_SERVICE_OP,
-              ?TAG])).
+              ?CID])).
 
 -define(SUBMIT_SM_RESP,
         ?PDU([?MESSAGE_ID],
@@ -256,7 +256,7 @@
               ?USER_MESSAGE_REFERENCE,
               ?USER_RESPONSE_CODE,        % (CDMA, TDMA)
               ?USSD_SERVICE_OP,
-              ?TAG])).
+              ?CID])).
 
 -define(DATA_SM_RESP,
         ?PDU([?MESSAGE_ID],
@@ -328,7 +328,7 @@
               ?USER_MESSAGE_REFERENCE,
               ?USER_RESPONSE_CODE,        % (CDMA, TDMA)
               ?USSD_SERVICE_OP,
-              ?TAG])).
+              ?CID])).
 
 %% Unlike some simulators, like SMPPSim 1.1, which they ignore the field
 %% ``no_unsuccess`` if no destination was unsuccessful, this
@@ -481,7 +481,7 @@
               ?SOURCE_PORT,
               ?SOURCE_SUBADDRESS,           % (CDMA, TDMA)
               ?USER_MESSAGE_REFERENCE,
-              ?TAG])).
+              ?CID])).
 
 -define(BROADCAST_SM_RESP,
         ?PDU([?MESSAGE_ID],
