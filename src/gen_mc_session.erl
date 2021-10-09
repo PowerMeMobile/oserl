@@ -119,7 +119,7 @@ stop(FsmRef) ->
     stop(FsmRef, normal).
 
 stop(FsmRef, Reason) ->
-    gen_fsm:sync_send_all_state_event(FsmRef, {stop, Reason}, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, {stop, Reason}, ?ASSERT_TIME).
 
 
 %%%-----------------------------------------------------------------------------
@@ -127,31 +127,31 @@ stop(FsmRef, Reason) ->
 %%%-----------------------------------------------------------------------------
 reply(FsmRef, {SeqNum, Reply}) ->
     Event = {reply, {SeqNum, Reply}},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 alert_notification(FsmRef, Params) ->
     Event = {?COMMAND_ID_ALERT_NOTIFICATION, Params},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 
 data_sm(FsmRef, Params) ->
     Event = {?COMMAND_ID_DATA_SM, Params},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 
 deliver_sm(FsmRef, Params) ->
     Event = {?COMMAND_ID_DELIVER_SM, Params},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 
 outbind(FsmRef, Params) ->
     Event = {?COMMAND_ID_OUTBIND, Params},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 
 unbind(FsmRef) ->
     Event = {?COMMAND_ID_UNBIND, []},
-    gen_fsm:sync_send_all_state_event(FsmRef, Event, ?ASSERT_TIME).
+    gen_statem:call(FsmRef, Event, ?ASSERT_TIME).
 
 %%%-----------------------------------------------------------------------------
 %%% INIT/TERMINATE EXPORTS
@@ -471,7 +471,7 @@ handle_event({input, CmdId, Pdu, Lapse, Timestamp}, Stn, Std) ->
     smpp_session:cancel_timer(Std#st.enquire_link_resp_timer),  % In case it was set
     smpp_session:cancel_timer(Std#st.inactivity_timer),
     smpp_session:cancel_timer(Std#st.enquire_link_timer),
-    gen_fsm:send_event(self(), {CmdId, Pdu}),
+    gen_statem:cast(self(), {CmdId, Pdu}),
     TE = smpp_session:start_timer(Std#st.timers, enquire_link_timer),
     TI = smpp_session:start_timer(Std#st.timers, inactivity_timer),
     C = smpp_session:congestion(Std#st.congestion_state, Lapse, Timestamp),
@@ -509,7 +509,7 @@ handle_info({'DOWN', _Ref, _Type, _Mc, Reason}, _Stn, Std) ->
 handle_info({inet_reply, _, ok}, Stn, Std) ->
     {next_state, Stn, Std};
 handle_info({inet_reply, _, Reason}, Stn, Std) ->
-    gen_fsm:send_all_state_event(self(), {sock_error, Reason}),
+    gen_statem:cast(self(), {sock_error, Reason}),
     {next_state, Stn, Std};
 handle_info(_Info, Stn, Std) ->
     {next_state, Stn, Std}.
@@ -553,11 +553,11 @@ start_connect(Mod, Mc, Opts) ->
     case smpp_session:connect(Opts) of
         {ok, Sock} ->
             Args = [Mod, Mc, [{sock, Sock} | Opts]],
-            case gen_fsm:start_link(?MODULE, Args, []) of
+            case gen_statem:start_link(?MODULE, Args, []) of
                 {ok, Pid} ->
                     case smpp_session:controlling_process(Sock, Pid) of
                         ok ->
-                            gen_fsm:send_event(Pid, activate),
+                            gen_statem:cast(Pid, activate),
                             {ok, Pid};
                         CtrlError ->
                             smpp_session:close(Sock),
@@ -572,7 +572,7 @@ start_connect(Mod, Mc, Opts) ->
     end.
 
 start_listen(Mod, Mc, Opts) ->
-    gen_fsm:start_link(?MODULE, [Mod, Mc, Opts], []).
+    gen_statem:start_link(?MODULE, [Mod, Mc, Opts], []).
 
 %%%-----------------------------------------------------------------------------
 %%% HANDLE PEER FUNCTIONS
@@ -639,7 +639,7 @@ handle_timeout({response_timer, SeqNum}, St) ->
     handle_peer_resp({error, Status}, Ref, St),
     ok;
 handle_timeout(enquire_link_timer, _St) ->
-    ok = gen_fsm:send_all_state_event(self(), ?COMMAND_ID_ENQUIRE_LINK);
+    ok = gen_statem:cast(self(), ?COMMAND_ID_ENQUIRE_LINK);
 handle_timeout(enquire_link_failure, _St) ->
     {error, {timeout, enquire_link}};
 handle_timeout(session_init_timer, _St) ->
@@ -670,7 +670,7 @@ send_request(CmdId, Params, From, St)
     SeqNum = ?INCR_SEQUENCE_NUMBER(St#st.sequence_number),
     Pdu = smpp_operation:new(CmdId, SeqNum, Params),
     ok = smpp_session:send_pdu(St#st.sock, Pdu, St#st.log),
-    gen_fsm:reply(From, ok),
+    gen_statem:reply(From, ok),
     St#st{sequence_number = SeqNum,
           enquire_link_timer = smpp_session:start_timer(St#st.timers, enquire_link_timer),
           inactivity_timer = smpp_session:start_timer(St#st.timers, inactivity_timer)};
@@ -678,7 +678,7 @@ send_request(CmdId, Params, From, St)
 
 send_request(CmdId, Params, From, St) ->
     Ref = make_ref(),
-    gen_fsm:reply(From, Ref),
+    gen_statem:reply(From, Ref),
     SeqNum = ?INCR_SEQUENCE_NUMBER(St#st.sequence_number),
     Pdu = smpp_operation:new(CmdId, SeqNum, Params),
     case smpp_operation:pack(Pdu) of

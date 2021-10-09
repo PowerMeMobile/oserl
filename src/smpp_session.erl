@@ -172,7 +172,7 @@ send_pdu(Sock, BinPdu, Log) when is_list(BinPdu) ->
         ok ->
             ok = smpp_log_mgr:pdu(Log, {out, BinPdu});
         {error, Reason} ->
-            gen_fsm:send_all_state_event(self(), {sock_error, Reason})
+            gen_statem:cast(self(), {sock_error, Reason})
     end;
 
 
@@ -209,7 +209,7 @@ wait_accept(Pid, LSock, Log) when is_port(LSock) ->
         {ok, Sock} ->
             handle_accept(Pid, LSock, Log, Sock);
         {error, Reason} ->
-            gen_fsm:send_all_state_event(Pid, {listen_error, Reason})
+            gen_statem:cast(Pid, {listen_error, Reason})
     end;
 
 
@@ -219,10 +219,10 @@ wait_accept(Pid, LSock, Log) ->
             case ssl:ssl_accept(Sock) of
                 ok -> handle_accept(Pid, LSock, Log, Sock);
                 {error, Reason} ->
-                    gen_fsm:send_all_state_event(Pid, {handshake_error, Reason})
+                    gen_statem:cast(Pid, {handshake_error, Reason})
             end;
         {error, Reason} ->
-            gen_fsm:send_all_state_event(Pid, {listen_error, Reason})
+            gen_statem:cast(Pid, {listen_error, Reason})
     end.
 
 
@@ -253,11 +253,11 @@ recv_loop(Pid, Sock, Buffer, Log) ->
         {TransportClosed, Sock} when
               TransportClosed =:= tcp_closed orelse
               TransportClosed =:= ssl_closed ->
-            gen_fsm:send_all_state_event(Pid, {sock_error, closed});
+            gen_statem:cast(Pid, {sock_error, closed});
         {TransportError, Sock, Reason} when
               TransportError =:= tcp_error orelse
               TransportError =:= ssl_error ->
-            gen_fsm:send_all_state_event(Pid, {sock_error, Reason})
+            gen_statem:cast(Pid, {sock_error, Reason})
     end.
 
 
@@ -274,7 +274,7 @@ setopts(Sock, Opts) ->
 cancel_timer(undefined) ->
     false;
 cancel_timer(Ref) ->
-    gen_fsm:cancel_timer(Ref).
+    erlang:cancel_timer(Ref).
 
 
 start_timer(#timers_smpp{response_time = infinity}, {response_timer, _}) ->
@@ -290,17 +290,17 @@ start_timer(#timers_smpp{inactivity_time = infinity}, inactivity_timer) ->
 start_timer(#timers_smpp{smsc_inactivity_time = infinity}, smsc_inactivity_timer) ->
     undefined;
 start_timer(#timers_smpp{response_time = Time}, {response_timer, _} = Msg) ->
-    gen_fsm:start_timer(Time, Msg);
+    erlang:start_timer(Time, self(), Msg);
 start_timer(#timers_smpp{response_time = Time}, enquire_link_failure) ->
-    gen_fsm:start_timer(Time, enquire_link_failure);
+    erlang:start_timer(Time, self(), enquire_link_failure);
 start_timer(#timers_smpp{enquire_link_time = Time}, enquire_link_timer) ->
-    gen_fsm:start_timer(Time, enquire_link_timer);
+    erlang:start_timer(Time, self(), enquire_link_timer);
 start_timer(#timers_smpp{session_init_time = Time}, session_init_timer) ->
-    gen_fsm:start_timer(Time, session_init_timer);
+    erlang:start_timer(Time, self(), session_init_timer);
 start_timer(#timers_smpp{smsc_inactivity_time = Time}, smsc_inactivity_timer) ->
-    gen_fsm:start_timer(Time, smsc_inactivity_timer);
+    erlang:start_timer(Time, self(), smsc_inactivity_timer);
 start_timer(#timers_smpp{inactivity_time = Time}, inactivity_timer) ->
-    gen_fsm:start_timer(Time, inactivity_timer).
+    erlang:start_timer(Time, self(), inactivity_timer).
 
 %%%-----------------------------------------------------------------------------
 %%% INTERNAL FUNCTIONS
@@ -314,7 +314,7 @@ default_addr() ->
 handle_accept(Pid, Sock) when is_port(Sock) ->
     case inet:peername(Sock) of
         {ok, {Addr, Port}} ->
-            gen_fsm:sync_send_event(Pid, {accept, Sock, Addr, Port});
+            gen_statem:call(Pid, {accept, Sock, Addr, Port});
         {error, _Reason} ->  % Most probably the socket is closed
             false
     end;
@@ -323,7 +323,7 @@ handle_accept(Pid, Sock) when is_port(Sock) ->
 handle_accept(Pid, Sock) ->
     case ssl:peername(Sock) of
         {ok, {Addr, Port}} ->
-            gen_fsm:sync_send_event(Pid, {accept, Sock, Addr, Port});
+            gen_statem:call(Pid, {accept, Sock, Addr, Port});
         {error, _Reason} ->  % Most probably the socket is closed
             false
     end.
@@ -340,12 +340,12 @@ handle_input(Pid, <<CmdLen:32, Rest/binary>> = Buffer, Lapse, N, Log) ->
                     smpp_log_mgr:pdu(Log, {in, BinPdu}),
                     CmdId = smpp_operation:get_value(command_id, Pdu),
                     Event = {input, CmdId, Pdu, (Lapse div N), Now},
-                    gen_fsm:send_all_state_event(Pid, Event);
+                    gen_statem:cast(Pid, Event);
                 {error, _CmdId, _Status, _SeqNum} = Event ->
-                    gen_fsm:send_all_state_event(Pid, Event);
+                    gen_statem:cast(Pid, Event);
                 {'EXIT', _What} ->
                     Event = {error, 0, ?ESME_RUNKNOWNERR, 0},
-                    gen_fsm:send_all_state_event(Pid, Event)
+                    gen_statem:cast(Pid, Event)
             end,
             % The buffer may carry more than one SMPP PDU.
             handle_input(Pid, NextPdus, Lapse, N + 1, Log);
