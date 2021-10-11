@@ -27,7 +27,7 @@
 %%% ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 %%% POSSIBILITY OF SUCH DAMAGE.
 -module(gen_esme_session).
--behaviour(gen_fsm).
+-behaviour(gen_statem).
 
 %%% INCLUDE FILES
 -include_lib("oserl/include/oserl.hrl").
@@ -61,7 +61,8 @@
          listen/3,
          open/2,
          outbound/2,
-         unbound/2]).
+         unbound/2,
+  callback_mode/0]).
 
 %%% HANDLE EXPORTS
 -export([handle_event/3, handle_info/3, handle_sync_event/4]).
@@ -112,6 +113,9 @@
 -callback handle_resp(esme(), response(), reference()) -> any().
 -callback handle_timeout(term(), term(), term()) -> term().
 -callback handle_unbind(term(), term()) -> term().
+
+callback_mode() ->
+  handle_event_function.
 
 %%%-----------------------------------------------------------------------------
 %%% START/STOP EXPORTS
