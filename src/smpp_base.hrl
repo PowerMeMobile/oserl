@@ -87,21 +87,18 @@
 -define(ENCODING_SCHEME_DOMAIN,
         ?UNION([?RANGE_INTEGER(1, 2#00000000, 2#00001010),
                 ?RANGE_INTEGER(1, 2#00001101, 2#00001110),
-                % the following three values are forbidden by the standard,
+                % the following values from 16 to 27 are forbidden by the standard,
                 % but required by clients. and clients always win.
-                ?CONSTANT(2#00010000), % class 0, default alphabet.
-                ?CONSTANT(2#00010100), % class 0, 8 bit.
-                ?CONSTANT(2#00011000), % class 0, UCS2 (16bit).
+                % there are clients who use data_coding 17 and 25 for instance.
+                ?RANGE_INTEGER(1, 2#00010000, 2#00011011), % classes 0, 1, 2, 3 for all character set
                 ?RANGE_INTEGER(1, 2#11000000, 2#11011111),
                 ?RANGE_INTEGER(1, 2#11110000, 2#11111111)])).
 -define(ENCODING_SCHEME_RESERVED,
         ?UNION([?RANGE_INTEGER(1, 2#00001011, 2#00001100),
                 ?CONSTANT(2#00001111),
                 % the following ranges do not include:
-                % 2#00010000, 2#00010100, 2#00011000 (see the comments above).
-                ?RANGE_INTEGER(1, 2#00010001, 2#00010011),
-                ?RANGE_INTEGER(1, 2#00010101, 2#00010111),
-                ?RANGE_INTEGER(1, 2#00011001, 2#10111111),
+                % see the comments above about datacoding 16-27.
+                ?RANGE_INTEGER(1, 2#00011100, 2#10111111),
                 ?RANGE_INTEGER(1, 2#11100000, 2#11101111)])).
 
 %% Used by: message_id, receipted_message_id
