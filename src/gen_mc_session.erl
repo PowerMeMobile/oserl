@@ -197,8 +197,8 @@ init_listen(Mod, Mc, LSock, Tmr, Log) ->
                      timers = Tmr}}.
 
 
-terminate(_Reason, _Stn, Std) ->
-    exit(Std#st.sock_ctrl, kill),
+terminate(Reason, _Stn, Std) ->
+    exit(Std#st.sock_ctrl, Reason),
     if Std#st.sock == undefined -> ok; true -> smpp_session:close(Std#st.sock) end.
 
 %%%-----------------------------------------------------------------------------
